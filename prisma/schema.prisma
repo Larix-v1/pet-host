@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  hashedPassword String
+  name           String?
+  avatar         String?
+  phone          String?
+  address        String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  
+  // 用户作为寄养者的订单
+  fosterOrders   Order[]   @relation("FosterOrders")
+  // 用户作为寄养服务提供者的订单
+  providerOrders Order[]   @relation("ProviderOrders")
+  // 用户提供的寄养服务
+  fosterServices FosterService[]
+}
+
+model FosterService {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  price       Float
+  location    String
+  petTypes    String[] // ["dog", "cat", "other"]
+  available   Boolean  @default(true)
+  rating      Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id])
+  orders      Order[]
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  fosterId        String        // 寄养者ID
+  providerId      String        // 服务提供者ID
+  serviceId       String
+  startDate       DateTime
+  endDate         DateTime
+  status          OrderStatus   @default(PENDING)
+  totalPrice      Float
+  petInfo         Json         // 存储宠物信息
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  foster          User          @relation("FosterOrders", fields: [fosterId], references: [id])
+  provider        User          @relation("ProviderOrders", fields: [providerId], references: [id])
+  service         FosterService @relation(fields: [serviceId], references: [id])
+}
+
+enum OrderStatus {
+  PENDING    // 待确认
+  CONFIRMED  // 已确认
+  ONGOING    // 进行中
+  COMPLETED  // 已完成
+  CANCELLED  // 已取消
+} 
